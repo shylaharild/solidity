@@ -41,8 +41,9 @@ void ConstantEvaluator::endVisit(BinaryOperation const& _operation)
 	auto right = type(_operation.rightExpression());
 	if (left && right)
 	{
-		TypePointer commonType = left->binaryOperatorResult(_operation.getOperator(), right);
-		if (!commonType)
+		TypeResult result = left->binaryOperatorResult(_operation.getOperator(), right);
+		TypePointer resultType(result);
+		if (!resultType)
 			m_errorReporter.fatalTypeError(
 				_operation.location(),
 				"Operator " +
@@ -50,13 +51,14 @@ void ConstantEvaluator::endVisit(BinaryOperation const& _operation)
 				" not compatible with types " +
 				left->toString() +
 				" and " +
-				right->toString()
+				right->toString() +
+				(!result.error().empty() ? ". " + result.error() : "")
 			);
 		setType(
 			_operation,
 			TokenTraits::isCompareOp(_operation.getOperator()) ?
 			make_shared<BoolType>() :
-			commonType
+			resultType
 		);
 	}
 }

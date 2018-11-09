@@ -510,9 +510,8 @@ TypeResult AddressType::unaryOperatorResult(Token _operator) const
 
 TypeResult AddressType::binaryOperatorResult(Token _operator, TypePointer const& _other) const
 {
-	// Addresses can only be compared.
 	if (!TokenTraits::isCompareOp(_operator))
-		return TypePointer();
+		return TypeResult(TypePointer(), "Addresses can only be compared.");
 
 	return Type::commonType(shared_from_this(), _other);
 }
@@ -580,7 +579,7 @@ BoolResult IntegerType::isImplicitlyConvertibleTo(Type const& _convertTo) const
 	{
 		IntegerType const& convertTo = dynamic_cast<IntegerType const&>(_convertTo);
 		if (convertTo.m_bits < m_bits)
-			return false;
+			return BoolResult(false, "Number of bits does not fit.");
 		else if (isSigned())
 			return convertTo.isSigned();
 		else
@@ -677,9 +676,8 @@ TypeResult IntegerType::binaryOperatorResult(Token _operator, TypePointer const&
 		return TypePointer();
 	if (auto intType = dynamic_pointer_cast<IntegerType const>(commonType))
 	{
-		// Signed EXP is not allowed
 		if (Token::Exp == _operator && intType->isSigned())
-			return TypePointer();
+			return TypeResult(TypePointer(), "Signed exponentiation is not allowed.");
 	}
 	else if (auto fixType = dynamic_pointer_cast<FixedPointType const>(commonType))
 		if (Token::Exp == _operator)
@@ -2307,12 +2305,12 @@ BoolResult TupleType::isImplicitlyConvertibleTo(Type const& _other) const
 		if (targets.empty())
 			return components().empty();
 		if (components().size() != targets.size())
-			return false;
+			return BoolResult(false, "Component sizes do not match.");
 		for (size_t i = 0; i < targets.size(); ++i)
 			if (!components()[i] && targets[i])
-				return false;
+				return BoolResult(false, "Types do not match.");
 			else if (components()[i] && targets[i] && !components()[i]->isImplicitlyConvertibleTo(*targets[i]))
-				return false;
+				return BoolResult(false, "Types do not match.");
 		return true;
 	}
 	else
@@ -2675,7 +2673,7 @@ TypeResult FunctionType::unaryOperatorResult(Token _operator) const
 {
 	if (_operator == Token::Delete)
 		return TypeResult(make_shared<TupleType>());
-	return TypePointer();
+	return TypeResult(TypePointer(), "Only delete is allowed as unary operator for functions.");
 }
 
 TypeResult FunctionType::binaryOperatorResult(Token _operator, TypePointer const& _other) const

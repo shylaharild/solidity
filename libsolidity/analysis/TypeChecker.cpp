@@ -1101,15 +1101,19 @@ void TypeChecker::endVisit(Return const& _return)
 	{
 		if (tupleType->components().size() != params->parameters().size())
 			m_errorReporter.typeError(_return.location(), "Different number of arguments in return statement than in returns declaration.");
-		else if (!tupleType->isImplicitlyConvertibleTo(TupleType(returnTypes)))
-			m_errorReporter.typeError(
-				_return.expression()->location(),
-				"Return argument type " +
-				type(*_return.expression())->toString() +
-				" is not implicitly convertible to expected type " +
-				TupleType(returnTypes).toString(false) +
-				"."
-			);
+		else
+		{
+			BoolResult result = tupleType->isImplicitlyConvertibleTo(TupleType(returnTypes));
+			if (!result)
+				m_errorReporter.typeError(
+					_return.expression()->location(),
+					"Return argument type " +
+					type(*_return.expression())->toString() +
+					" is not implicitly convertible to expected type " +
+					TupleType(returnTypes).toString(false) +
+					(!result.error().empty() ? ". " + result.error() : "")
+				);
+		}
 	}
 	else if (params->parameters().size() != 1)
 		m_errorReporter.typeError(_return.location(), "Different number of arguments in return statement than in returns declaration.");
@@ -1498,10 +1502,11 @@ bool TypeChecker::visit(Assignment const& _assignment)
 	{
 		// compound assignment
 		_assignment.rightHandSide().accept(*this);
-		TypePointer resultType = t->binaryOperatorResult(
+		TypeResult result = t->binaryOperatorResult(
 			TokenTraits::AssignmentToBinaryOp(_assignment.assignmentOperator()),
 			type(_assignment.rightHandSide())
 		);
+		TypePointer resultType = TypePointer(result);
 		if (!resultType || *resultType != *t)
 			m_errorReporter.typeError(
 				_assignment.location(),
@@ -1510,7 +1515,8 @@ bool TypeChecker::visit(Assignment const& _assignment)
 				" not compatible with types " +
 				t->toString() +
 				" and " +
-				type(_assignment.rightHandSide())->toString()
+				type(_assignment.rightHandSide())->toString() +
+				(!result.error().empty() ? ". " + result.error() : "")
 			);
 	}
 	return false;
@@ -1614,7 +1620,8 @@ bool TypeChecker::visit(UnaryOperation const& _operation)
 	else
 		_operation.subExpression().accept(*this);
 	TypePointer const& subExprType = type(_operation.subExpression());
-	TypePointer t = type(_operation.subExpression())->unaryOperatorResult(op);
+	TypeResult result = type(_operation.subExpression())->unaryOperatorResult(op);
+	TypePointer t = TypePointer(result);
 	if (!t)
 	{
 		m_errorReporter.typeError(
@@ -1622,7 +1629,8 @@ bool TypeChecker::visit(UnaryOperation const& _operation)
 			"Unary operator " +
 			string(TokenTraits::toString(op)) +
 			" cannot be applied to type " +
-			subExprType->toString()
+			subExprType->toString() +
+			(!result.error().empty() ? ". " + result.error() : "")
 		);
 		t = subExprType;
 	}
@@ -1635,7 +1643,8 @@ void TypeChecker::endVisit(BinaryOperation const& _operation)
 {
 	TypePointer const& leftType = type(_operation.leftExpression());
 	TypePointer const& rightType = type(_operation.rightExpression());
-	TypePointer commonType = leftType->binaryOperatorResult(_operation.getOperator(), rightType);
+	TypeResult result = leftType->binaryOperatorResult(_operation.getOperator(), rightType);
+	TypePointer commonType = TypePointer(result);
 	if (!commonType)
 	{
 		m_errorReporter.typeError(
@@ -1645,7 +1654,8 @@ void TypeChecker::endVisit(BinaryOperation const& _operation)
 			" not compatible with types " +
 			leftType->toString() +
 			" and " +
-			rightType->toString()
+			rightType->toString() +
+			(!result.error().empty() ? ". " + result.error() : "")
 		);
 		commonType = leftType;
 	}
