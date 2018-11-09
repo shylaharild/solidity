@@ -496,7 +496,7 @@ BOOST_AUTO_TEST_CASE(while_loop_simple)
 			}
 		}
 	)";
-	CHECK_WARNING(text, "Assertion violation happens here");
+	CHECK_SUCCESS_NO_WARNINGS(text);
 	// Check that condition is assumed.
 	text = R"(
 		contract C {

@@ -128,26 +128,18 @@ bool SMTChecker::visit(IfStatement const& _node)
 
 bool SMTChecker::visit(WhileStatement const& _node)
 {
+	if (_node.isDoWhile())
+		_node.body().accept(*this);
+	_node.condition().accept(*this);
+
+	auto indicesBeforeLoop = copyVariableIndices();
+
 	auto touchedVariables = m_variableUsage->touchedVariables(_node);
 	resetVariables(touchedVariables);
-	if (_node.isDoWhile())
-	{
-		visitBranch(_node.body());
-		// TODO the assertions generated in the body should still be active in the condition
-		_node.condition().accept(*this);
-		if (isRootFunction())
-			checkBooleanNotConstant(_node.condition(), "Do-while loop condition is always $VALUE.");
-	}
-	else
-	{
-		_node.condition().accept(*this);
-		if (isRootFunction())
-			checkBooleanNotConstant(_node.condition(), "While loop condition is always $VALUE.");
-
-		visitBranch(_node.body(), expr(_node.condition()));
-	}
 	m_loopExecutionHappened = true;
-	resetVariables(touchedVariables);
+
+	auto indicesEndLoop = visitBranch(_node.body(), expr(_node.condition()));
+	mergeVariables(touchedVariables, expr(_node.condition()), indicesEndLoop, indicesBeforeLoop);
 
 	return false;
 }
@@ -157,9 +149,10 @@ bool SMTChecker::visit(ForStatement const& _node)
 	if (_node.initializationExpression())
 		_node.initializationExpression()->accept(*this);
 
+	auto indicesBeforeLoop = copyVariableIndices();
+
 	// Do not reset the init expression part.
-	auto touchedVariables =
-		m_variableUsage->touchedVariables(_node.body());
+	auto touchedVariables = m_variableUsage->touchedVariables(_node.body());
 	if (_node.condition())
 		touchedVariables += m_variableUsage->touchedVariables(*_node.condition());
 	if (_node.loopExpression())
@@ -169,13 +162,10 @@ bool SMTChecker::visit(ForStatement const& _node)
 	touchedVariables.erase(std::unique(touchedVariables.begin(), touchedVariables.end()), touchedVariables.end());
 
 	resetVariables(touchedVariables);
+	m_loopExecutionHappened = true;
 
 	if (_node.condition())
-	{
 		_node.condition()->accept(*this);
-		if (isRootFunction())
-			checkBooleanNotConstant(*_node.condition(), "For loop condition is always $VALUE.");
-	}
 
 	m_interface->push();
 	if (_node.condition())
@@ -183,12 +173,10 @@ bool SMTChecker::visit(ForStatement const& _node)
 	_node.body().accept(*this);
 	if (_node.loopExpression())
 		_node.loopExpression()->accept(*this);
-
 	m_interface->pop();
 
-	m_loopExecutionHappened = true;
-
-	resetVariables(touchedVariables);
+	auto forCondition = _node.condition() ? expr(*_node.condition()) : smt::Expression(true);
+	mergeVariables(touchedVariables, forCondition, copyVariableIndices(), indicesBeforeLoop);
 
 	return false;
 }
@@ -808,6 +796,7 @@ void SMTChecker::checkCondition(
 		loopComment =
 			"\nNote that some information is erased after the execution of loops.\n"
 			"You can re-introduce information using require().";
+
 	switch (result)
 	{
 	case smt::CheckResult::SATISFIABLE:
