@@ -306,6 +306,10 @@ public:
 	/// should be have identical to !!interfaceType(_inLibrary) but might do optimizations.
 	virtual bool canBeUsedExternally(bool _inLibrary) const { return !!interfaceType(_inLibrary); }
 
+	/// @returns true iff a function with this type as argument can be used to overwrite a function
+	/// with an argument of type @param _type.
+	virtual bool canOverwriteArgument(Type const& _type) const { return *this == _type; }
+
 private:
 	/// @returns a member list containing all members added to this type by `using for` directives.
 	static MemberList::MemberMap boundFunctions(Type const& _type, ContractDefinition const& _scope);
@@ -653,6 +657,18 @@ public:
 	/// This function is mostly useful to modify inner types appropriately.
 	static TypePointer copyForLocationIfReference(DataLocation _location, TypePointer const& _type);
 
+	virtual bool canOverwriteArgument(Type const& _type) const override
+	{
+		if (auto type = dynamic_cast<ReferenceType const*>(&_type))
+		{
+			if (m_location == DataLocation::CallData && type->m_location == DataLocation::Memory)
+				return *copyForLocation(DataLocation::Memory, m_isPointer) == *type;
+			else
+				return *this == *type;
+		}
+		return false;
+	}
+
 protected:
 	TypePointer copyForLocationIfReference(TypePointer const& _type) const;
 	/// @returns a human-readable description of the reference part of the type.
@@ -841,6 +857,8 @@ public:
 
 	virtual std::string canonicalName() const override;
 	virtual std::string signatureInExternalFunction(bool _structsByName) const override;
+
+	virtual bool canOverwriteArgument(Type const& _type) const override;
 
 	/// @returns a function that performs the type conversion between a list of struct members
 	/// and a memory struct of this type.
@@ -1099,6 +1117,9 @@ public:
 	bool hasEqualReturnTypes(FunctionType const& _other) const;
 	/// @returns true iff the function type is equal to the given type, ignoring state mutability differences.
 	bool equalExcludingStateMutability(FunctionType const& _other) const;
+
+	/// @returns true iff a function of this type can overwrite a function of type @param _other.
+	bool canOverwrite(FunctionType const& _other) const;
 
 	/// @returns true if the ABI is NOT used for this call (only meaningful for external calls)
 	bool isBareCall() const;

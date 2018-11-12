@@ -252,7 +252,7 @@ void TypeChecker::checkContractAbstractFunctions(ContractDefinition const& _cont
 			FunctionTypePointer funType = make_shared<FunctionType>(*function);
 			auto it = find_if(overloads.begin(), overloads.end(), [&](FunTypeAndFlag const& _funAndFlag)
 			{
-				return funType->hasEqualParameterTypes(*_funAndFlag.first);
+				return _funAndFlag.first->canOverwrite(*funType);
 			});
 			if (it == overloads.end())
 				overloads.push_back(make_pair(funType, function->isImplemented()));
@@ -475,7 +475,7 @@ void TypeChecker::checkContractExternalTypeClashes(ContractDefinition const& _co
 	for (auto const& it: externalDeclarations)
 		for (size_t i = 0; i < it.second.size(); ++i)
 			for (size_t j = i + 1; j < it.second.size(); ++j)
-				if (!it.second[i].second->hasEqualParameterTypes(*it.second[j].second))
+				if (!it.second[j].second->canOverwrite(*it.second[i].second))
 					m_errorReporter.typeError(
 						it.second[j].first->location(),
 						"Function overload clash during conversion to external types for arguments."

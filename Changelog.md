@@ -1,7 +1,7 @@
 ### 0.5.1 (unreleased)
 
 Language Features:
-
+ * Inheritance: Allow overwriting external functions with ``calldata`` arguments with public functions with ``memory`` arguments.
 
 Compiler Features:
  * Build System: LLL is not built anymore by default. Must configure it with CMake as `-DLLL=ON`.

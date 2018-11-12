@@ -2157,6 +2157,14 @@ string StructType::signatureInExternalFunction(bool _structsByName) const
 	}
 }
 
+bool StructType::canOverwriteArgument(const dev::solidity::Type &_other) const
+{
+	if (_other.category() != category())
+		return false;
+	StructType const& other = dynamic_cast<StructType const&>(_other);
+	return ReferenceType::canOverwriteArgument(other) && other.m_struct == m_struct;
+}
+
 string StructType::canonicalName() const
 {
 	return m_struct.annotation().canonicalName;
@@ -2959,6 +2967,18 @@ bool FunctionType::equalExcludingStateMutability(FunctionType const& _other) con
 	solAssert(!bound() || *selfType() == *_other.selfType(), "");
 
 	return true;
+}
+
+bool FunctionType::canOverwrite(FunctionType const& _other) const
+{
+	if (m_parameterTypes.size() != _other.m_parameterTypes.size())
+		return false;
+	return equal(
+		m_parameterTypes.cbegin(),
+		m_parameterTypes.cend(),
+		_other.m_parameterTypes.cbegin(),
+		[](TypePointer const& _a, TypePointer const& _b) -> bool { return _a->canOverwriteArgument(*_b); }
+	);
 }
 
 bool FunctionType::isBareCall() const
