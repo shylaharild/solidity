@@ -52,7 +52,7 @@ void ConstantEvaluator::endVisit(BinaryOperation const& _operation)
 				left->toString() +
 				" and " +
 				right->toString() +
-				(!result.error().empty() ? ". " + result.error() : "")
+				(!result.err().empty() ? ". " + result.err() : "")
 			);
 		setType(
 			_operation,

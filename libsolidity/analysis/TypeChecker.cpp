@@ -1111,7 +1111,7 @@ void TypeChecker::endVisit(Return const& _return)
 					type(*_return.expression())->toString() +
 					" is not implicitly convertible to expected type " +
 					TupleType(returnTypes).toString(false) +
-					(!result.error().empty() ? ". " + result.error() : "")
+					(!result.err().empty() ? ". " + result.err() : "")
 				);
 		}
 	}
@@ -1516,7 +1516,7 @@ bool TypeChecker::visit(Assignment const& _assignment)
 				t->toString() +
 				" and " +
 				type(_assignment.rightHandSide())->toString() +
-				(!result.error().empty() ? ". " + result.error() : "")
+				(!result.err().empty() ? ". " + result.err() : "")
 			);
 	}
 	return false;
@@ -1630,7 +1630,7 @@ bool TypeChecker::visit(UnaryOperation const& _operation)
 			string(TokenTraits::toString(op)) +
 			" cannot be applied to type " +
 			subExprType->toString() +
-			(!result.error().empty() ? ". " + result.error() : "")
+			(!result.err().empty() ? ". " + result.err() : "")
 		);
 		t = subExprType;
 	}
@@ -1655,7 +1655,7 @@ void TypeChecker::endVisit(BinaryOperation const& _operation)
 			leftType->toString() +
 			" and " +
 			rightType->toString() +
-			(!result.error().empty() ? ". " + result.error() : "")
+			(!result.err().empty() ? ". " + result.err() : "")
 		);
 		commonType = leftType;
 	}

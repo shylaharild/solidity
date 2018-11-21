@@ -1,18 +1,18 @@
 /*
-    This file is part of solidity.
+	This file is part of solidity.
 
-    solidity is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+	solidity is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
 
-    solidity is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	solidity is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with solidity.  If not, see <http://www.gnu.org/licenses/>.
+	You should have received a copy of the GNU General Public License
+	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
 /**
  * @author Christian <c@ethdev.com>
@@ -511,9 +511,9 @@ TypeResult AddressType::unaryOperatorResult(Token _operator) const
 TypeResult AddressType::binaryOperatorResult(Token _operator, TypePointer const& _other) const
 {
 	if (!TokenTraits::isCompareOp(_operator))
-		return TypeResult(TypePointer(), "Addresses can only be compared.");
+		return TypeResult::Err("Addresses can only be compared.");
 
-	return Type::commonType(shared_from_this(), _other);
+	return TypeResult::Ok(Type::commonType(shared_from_this(), _other));
 }
 
 bool AddressType::operator==(Type const& _other) const
@@ -579,7 +579,7 @@ BoolResult IntegerType::isImplicitlyConvertibleTo(Type const& _convertTo) const
 	{
 		IntegerType const& convertTo = dynamic_cast<IntegerType const&>(_convertTo);
 		if (convertTo.m_bits < m_bits)
-			return BoolResult(false, "Number of bits does not fit.");
+			return BoolResult::Err("Number of bits does not fit.");
 		else if (isSigned())
 			return convertTo.isSigned();
 		else
@@ -677,7 +677,7 @@ TypeResult IntegerType::binaryOperatorResult(Token _operator, TypePointer const&
 	if (auto intType = dynamic_pointer_cast<IntegerType const>(commonType))
 	{
 		if (Token::Exp == _operator && intType->isSigned())
-			return TypeResult(TypePointer(), "Signed exponentiation is not allowed.");
+			return TypeResult::Err("Signed exponentiation is not allowed.");
 	}
 	else if (auto fixType = dynamic_pointer_cast<FixedPointType const>(commonType))
 		if (Token::Exp == _operator)
@@ -1697,8 +1697,8 @@ bool ArrayType::operator==(Type const& _other) const
 bool ArrayType::validForCalldata() const
 {
 	if (auto arrayBaseType = dynamic_cast<ArrayType const*>(baseType().get()))
-        if (!arrayBaseType->validForCalldata())
-            return false;
+		if (!arrayBaseType->validForCalldata())
+			return false;
 	return unlimitedCalldataEncodedSize(true) <= numeric_limits<unsigned>::max();
 }
 
@@ -2305,16 +2305,16 @@ BoolResult TupleType::isImplicitlyConvertibleTo(Type const& _other) const
 		if (targets.empty())
 			return components().empty();
 		if (components().size() != targets.size())
-			return BoolResult(false, "Component sizes do not match.");
+			return BoolResult::Err("Component sizes do not match.");
 		for (size_t i = 0; i < targets.size(); ++i)
 			if (!components()[i] && targets[i])
-				return BoolResult(false, "Types do not match.");
+				return BoolResult::Err("Types do not match.");
 			else if (components()[i] && targets[i] && !components()[i]->isImplicitlyConvertibleTo(*targets[i]))
-				return BoolResult(false, "Types do not match.");
-		return true;
+				return BoolResult::Err("Types do not match.");
+		return BoolResult::Ok(true);
 	}
 	else
-		return false;
+		return BoolResult::Err();
 }
 
 string TupleType::richIdentifier() const
@@ -2672,8 +2672,8 @@ BoolResult FunctionType::isImplicitlyConvertibleTo(Type const& _convertTo) const
 TypeResult FunctionType::unaryOperatorResult(Token _operator) const
 {
 	if (_operator == Token::Delete)
-		return TypeResult(make_shared<TupleType>());
-	return TypeResult(TypePointer(), "Only delete is allowed as unary operator for functions.");
+		return TypeResult::Ok(make_shared<TupleType>());
+	return TypeResult::Err("Only delete is allowed as unary operator for functions.");
 }
 
 TypeResult FunctionType::binaryOperatorResult(Token _operator, TypePointer const& _other) const
